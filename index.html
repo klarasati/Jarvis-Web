@@ -17,7 +17,7 @@
             height: 100vh; 
             margin: 0; 
         }
-        h1 { text-shadow: 0 0 10px #00ffcc; }
+        h1 { text-shadow: 0 0 10px #00ffcc; text-align: center;}
         #chat-box { 
             width: 90%; 
             max-width: 600px; 
@@ -33,9 +33,10 @@
         .pesan { margin-bottom: 15px; line-height: 1.5; }
         .user { color: #ffffff; text-align: right; }
         .jarvis { color: #00ffcc; text-align: left; text-shadow: 0 0 3px #00ffcc; }
-        .input-area { width: 90%; max-width: 600px; display: flex; gap: 10px; }
+        .input-area { width: 90%; max-width: 600px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;}
         input { 
             flex: 1; 
+            min-width: 200px;
             padding: 12px; 
             border-radius: 5px; 
             border: 1px solid #00ffcc; 
@@ -54,35 +55,75 @@
             box-shadow: 0 0 10px #00ffcc; 
         }
         button:hover { background: #00ccaa; }
+        #btn-mic { background: #ff0055; color: white; box-shadow: 0 0 10px #ff0055;}
+        #btn-mic:hover { background: #cc0044; }
     </style>
 </head>
 <body>
     <h1>[ SYSTEM JARVIS ONLINE ]</h1>
     
     <div id="chat-box">
-        <div class="pesan jarvis">Jarvis: Sistem siap. Ada yang bisa saya bantu?</div>
+        <div class="pesan jarvis">Jarvis: Sistem suara aktif. Silakan tekan tombol mikrofon untuk berbicara.</div>
     </div>
     
     <div class="input-area">
-        <input type="text" id="input-teks" placeholder="Ketik perintah di sini..." onkeypress="jikaTekanEnter(event)">
+        <button id="btn-mic" onclick="mulaiMendengar()">🎙️ BICARA</button>
+        <input type="text" id="input-teks" placeholder="Atau ketik di sini..." onkeypress="jikaTekanEnter(event)">
         <button onclick="kirimPesan()">KIRIM</button>
     </div>
 
     <script>
-        // Logika untuk mengirim teks ke "Pelayan Rahasia" yang kita buat tadi
+        // --- BAGIAN 1: MULUT JARVIS (Text to Speech) ---
+        function bicara(teks) {
+            const suara = new SpeechSynthesisUtterance(teks);
+            suara.lang = 'id-ID'; // Menggunakan aksen Bahasa Indonesia
+            window.speechSynthesis.speak(suara);
+        }
+
+        // --- BAGIAN 2: TELINGA JARVIS (Speech to Text) ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'id-ID'; // Mendengarkan Bahasa Indonesia
+            recognition.interimResults = false; // Tunggu sampai kita selesai bicara
+
+            recognition.onresult = function(event) {
+                // Saat kita selesai bicara, teksnya dimasukkan ke kotak input
+                const teksSuara = event.results[0][0].transcript;
+                document.getElementById('input-teks').value = teksSuara;
+                document.getElementById('btn-mic').innerText = "🎙️ BICARA"; // Kembalikan tombol
+                kirimPesan(); // Otomatis mengirim pesan setelah kita selesai bicara
+            };
+
+            recognition.onerror = function(event) {
+                document.getElementById('btn-mic').innerText = "🎙️ BICARA";
+                alert("Gagal mendengarkan. Pastikan izin mikrofon sudah diberikan.");
+            };
+        } else {
+            alert("Browser Anda tidak mendukung fitur suara. Gunakan Google Chrome.");
+        }
+
+        function mulaiMendengar() {
+            if (recognition) {
+                document.getElementById('btn-mic').innerText = "🔴 Mendengarkan...";
+                recognition.start();
+            }
+        }
+
+        // --- BAGIAN 3: MENGHUBUNGKAN KE OTAK AI ---
         async function kirimPesan() {
             const inputField = document.getElementById('input-teks');
             const teks = inputField.value;
             if (!teks) return;
 
             const chatBox = document.getElementById('chat-box');
-            // Menampilkan pesan Anda di layar
             chatBox.innerHTML += `<div class="pesan user">Anda: ${teks}</div>`;
-            inputField.value = ''; // Kosongkan kotak ketik
-            chatBox.scrollTop = chatBox.scrollHeight; // Gulir ke bawah otomatis
+            inputField.value = ''; 
+            chatBox.scrollTop = chatBox.scrollHeight; 
 
             try {
-                // Mengetuk pintu Brankas Vercel (api/chat)
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -92,17 +133,20 @@
                 });
 
                 const data = await response.json();
-                // Mengambil jawaban dari Groq AI dan menampilkannya
                 const jawabanJarvis = data.choices[0].message.content;
+                
+                // Menampilkan teks di layar
                 chatBox.innerHTML += `<div class="pesan jarvis">Jarvis: ${jawabanJarvis}</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
+                
+                // Menyuruh Jarvis berbicara langsung!
+                bicara(jawabanJarvis);
 
             } catch (error) {
                 chatBox.innerHTML += `<div class="pesan jarvis">Error: Koneksi ke otak terputus.</div>`;
             }
         }
 
-        // Biar bisa kirim pakai tombol Enter di keyboard
         function jikaTekanEnter(event) {
             if (event.key === "Enter") {
                 kirimPesan();
