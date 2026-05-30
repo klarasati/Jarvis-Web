@@ -1,37 +1,113 @@
-module.exports = async function(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ message: 'Hanya menerima POST' });
-    }
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Jarvis</title>
+    <style>
+        body { background-color: #050505; color: #00ffcc; font-family: 'Courier New', Courier, monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        h1 { text-shadow: 0 0 10px #00ffcc; text-align: center;}
+        #chat-box { width: 90%; max-width: 600px; height: 400px; border: 1px solid #00ffcc; overflow-y: auto; padding: 15px; margin-bottom: 20px; border-radius: 10px; background: rgba(0, 255, 204, 0.05); }
+        .pesan { margin-bottom: 15px; line-height: 1.5; }
+        .user { color: #ffffff; text-align: right; }
+        .jarvis { color: #00ffcc; text-align: left; }
+        .error-log { color: #ff3333; text-align: left; font-weight: bold;}
+        .input-area { width: 90%; max-width: 600px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;}
+        input { flex: 1; min-width: 200px; padding: 12px; border-radius: 5px; border: 1px solid #00ffcc; background: #111; color: #fff; outline: none; }
+        button { padding: 12px 20px; border-radius: 5px; border: none; background: #00ffcc; color: #000; font-weight: bold; cursor: pointer; }
+        #btn-mic { background: #ff0055; color: white; }
+    </style>
+</head>
+<body>
+    <h1>[ SYSTEM JARVIS ONLINE ]</h1>
+    
+    <div id="chat-box">
+        <div class="pesan jarvis">Jarvis: Sistem suara dioptimalkan. Saya siap.</div>
+    </div>
+    
+    <div class="input-area">
+        <button id="btn-mic" onclick="mulaiMendengar()">🎙️ BICARA</button>
+        <input type="text" id="input-teks" placeholder="Ketik perintah..." onkeypress="jikaTekanEnter(event)">
+        <button onclick="kirimPesan()">KIRIM</button>
+    </div>
 
-    try {
-        // --- INI ADALAH "ROH" DAN INGATAN DASAR JARVIS ---
-        // Anda bisa mengubah teks di bawah ini sesuka hati nanti!
-        const pesanSistem = {
-            role: 'system',
-            content: 'Kamu adalah Jarvis, asisten AI cerdas bergaya fiksi ilmiah. Hari ini adalah tanggal 30 Mei 2026. Presiden Indonesia saat ini adalah Prabowo Subianto. Jawablah setiap pertanyaan dengan ringkas, padat, dan gunakan bahasa Indonesia yang santai tapi sopan.'
-        };
+    <script>
+        function bicara(teks) {
+            // Trik Rahasia 1: Hapus memori suara sebelumnya agar tidak antre/delay
+            window.speechSynthesis.cancel();
 
-        // Menggabungkan ingatan dasar dengan pertanyaan yang baru Anda ketik
-        const semuaPesan = [pesanSistem, ...req.body.messages];
+            const suara = new SpeechSynthesisUtterance(teks);
+            suara.lang = 'id-ID'; 
+            
+            // Trik Rahasia 2: Percepat tempo suara (Default 1.0, kita ubah ke 1.3)
+            suara.rate = 1.3; 
+            suara.pitch = 1.0; 
+            
+            window.speechSynthesis.speak(suara);
+        }
 
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: 'llama-3.1-8b-instant',
-                messages: semuaPesan, // Menggunakan pesan yang sudah digabung
-                temperature: 0.7
-            })
-        });
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'id-ID'; 
+            recognition.interimResults = false; 
+            recognition.onresult = function(event) {
+                document.getElementById('input-teks').value = event.results[0][0].transcript;
+                document.getElementById('btn-mic').innerText = "🎙️ BICARA"; 
+                kirimPesan(); 
+            };
+            recognition.onerror = function(event) {
+                document.getElementById('btn-mic').innerText = "🎙️ BICARA";
+            };
+        }
 
-        const data = await response.json();
-        res.status(200).json(data);
-        
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Gagal menghubungi otak AI' });
-    }
-};
+        function mulaiMendengar() {
+            if (recognition) {
+                document.getElementById('btn-mic').innerText = "🔴 Mendengarkan...";
+                recognition.start();
+            }
+        }
+
+        async function kirimPesan() {
+            const inputField = document.getElementById('input-teks');
+            const teks = inputField.value;
+            if (!teks) return;
+
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `<div class="pesan user">Anda: ${teks}</div>`;
+            inputField.value = ''; 
+            chatBox.scrollTop = chatBox.scrollHeight; 
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: [{ role: 'user', content: teks }] })
+                });
+
+                const data = await response.json();
+                
+                if (!data.choices || !data.choices[0]) {
+                    chatBox.innerHTML += `<div class="pesan error-log">SYSTEM ERROR:<br>${JSON.stringify(data)}</div>`;
+                    return; 
+                }
+
+                const jawabanJarvis = data.choices[0].message.content;
+                chatBox.innerHTML += `<div class="pesan jarvis">Jarvis: ${jawabanJarvis}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+                
+                // Panggil fungsi bicara yang sudah dipercepat
+                bicara(jawabanJarvis);
+
+            } catch (error) {
+                chatBox.innerHTML += `<div class="pesan error-log">FATAL ERROR: ${error.message}</div>`;
+            }
+        }
+
+        function jikaTekanEnter(event) {
+            if (event.key === "Enter") kirimPesan();
+        }
+    </script>
+</body>
+</html>
