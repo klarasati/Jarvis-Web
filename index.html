@@ -80,11 +80,10 @@
 
                 const data = await response.json();
                 
-                // DIAGNOSTIK: Jika Groq menolak, tampilkan alasan aslinya dengan warna merah!
                 if (!data.choices || !data.choices[0]) {
                     chatBox.innerHTML += `<div class="pesan error-log">SYSTEM ERROR DARI GROQ:<br>${JSON.stringify(data)}</div>`;
                     chatBox.scrollTop = chatBox.scrollHeight;
-                    return; // Hentikan eksekusi
+                    return; 
                 }
 
                 const jawabanJarvis = data.choices[0].message.content;
