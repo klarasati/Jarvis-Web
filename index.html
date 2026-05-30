@@ -22,7 +22,7 @@
     <h1>[ SYSTEM JARVIS ONLINE ]</h1>
     
     <div id="chat-box">
-        <div class="pesan jarvis">Jarvis: Sistem suara dioptimalkan. Saya siap.</div>
+        <div class="pesan jarvis">Jarvis: Sistem suara aktif. Saya siap berdiskusi.</div>
     </div>
     
     <div class="input-area">
@@ -32,6 +32,9 @@
     </div>
 
     <script>
+        // Flag untuk mencegah duplikasi (Gerbang Filter)
+        let sedangMemproses = false;
+
         function bicara(teks) {
             window.speechSynthesis.cancel();
             const suara = new SpeechSynthesisUtterance(teks);
@@ -47,27 +50,33 @@
             recognition.lang = 'id-ID'; 
             recognition.interimResults = false; 
             recognition.onresult = function(event) {
+                // Hentikan jika sedang memproses
+                if (sedangMemproses) return;
                 document.getElementById('input-teks').value = event.results[0][0].transcript;
                 document.getElementById('btn-mic').innerText = "🎙️ BICARA"; 
                 kirimPesan(); 
             };
             recognition.onerror = function(event) {
                 document.getElementById('btn-mic').innerText = "🎙️ BICARA";
+                sedangMemproses = false;
             };
         }
 
         function mulaiMendengar() {
-            if (recognition) {
+            if (recognition && !sedangMemproses) {
                 document.getElementById('btn-mic').innerText = "🔴 Mendengarkan...";
                 recognition.start();
             }
         }
 
         async function kirimPesan() {
+            if (sedangMemproses) return; // Mencegah klik ganda
+            
             const inputField = document.getElementById('input-teks');
             const teks = inputField.value;
             if (!teks) return;
 
+            sedangMemproses = true; // Kunci gerbang
             const chatBox = document.getElementById('chat-box');
             chatBox.innerHTML += `<div class="pesan user">Anda: ${teks}</div>`;
             inputField.value = ''; 
@@ -82,19 +91,16 @@
 
                 const data = await response.json();
                 
-                if (!data.choices || !data.choices[0]) {
-                    chatBox.innerHTML += `<div class="pesan error-log">SYSTEM ERROR:<br>${JSON.stringify(data)}</div>`;
-                    return; 
+                if (data.choices && data.choices[0]) {
+                    const jawabanJarvis = data.choices[0].message.content;
+                    chatBox.innerHTML += `<div class="pesan jarvis">Jarvis: ${jawabanJarvis}</div>`;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    bicara(jawabanJarvis);
                 }
-
-                const jawabanJarvis = data.choices[0].message.content;
-                chatBox.innerHTML += `<div class="pesan jarvis">Jarvis: ${jawabanJarvis}</div>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
-                
-                bicara(jawabanJarvis);
-
             } catch (error) {
-                chatBox.innerHTML += `<div class="pesan error-log">FATAL ERROR: ${error.message}</div>`;
+                chatBox.innerHTML += `<div class="pesan error-log">FATAL ERROR: Koneksi terputus.</div>`;
+            } finally {
+                sedangMemproses = false; // Buka kunci gerbang setelah selesai
             }
         }
 
