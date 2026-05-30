@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Hanya menerima POST' });
     }
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                llama-3.1-8b-instant, // INI ADALAH OTAK VERSI TERBARU YANG AKTIF
+                model: 'llama-3.1-8b-instant', // Otak terbaru yang aktif
                 messages: req.body.messages,
                 temperature: 0.7
             })
@@ -24,4 +24,4 @@ export default async function handler(req, res) {
         console.error(error);
         res.status(500).json({ error: 'Gagal menghubungi otak AI' });
     }
-}
+};
