@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Jarvis - Mode Detektif</title>
+    <title>Sistem Jarvis</title>
     <style>
         body { background-color: #050505; color: #00ffcc; font-family: 'Courier New', Courier, monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
         h1 { text-shadow: 0 0 10px #00ffcc; text-align: center;}
@@ -11,7 +11,7 @@
         .pesan { margin-bottom: 15px; line-height: 1.5; }
         .user { color: #ffffff; text-align: right; }
         .jarvis { color: #00ffcc; text-align: left; }
-        .error-log { color: #ff3333; text-align: left; font-weight: bold; background: rgba(255,0,0,0.1); padding: 10px; border-radius: 5px;}
+        .error-log { color: #ff3333; text-align: left; font-weight: bold;}
         .input-area { width: 90%; max-width: 600px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;}
         input { flex: 1; min-width: 200px; padding: 12px; border-radius: 5px; border: 1px solid #00ffcc; background: #111; color: #fff; outline: none; }
         button { padding: 12px 20px; border-radius: 5px; border: none; background: #00ffcc; color: #000; font-weight: bold; cursor: pointer; }
@@ -19,22 +19,24 @@
     </style>
 </head>
 <body>
-    <h1>[ SYSTEM JARVIS: DEBUG MODE ]</h1>
+    <h1>[ SYSTEM JARVIS ONLINE ]</h1>
     
     <div id="chat-box">
-        <div class="pesan jarvis">Jarvis: Mode detektif aktif. Silakan ketik sesuatu untuk mengecek masalah di Groq.</div>
+        <div class="pesan jarvis">Jarvis: Sistem suara dioptimalkan. Saya siap.</div>
     </div>
     
     <div class="input-area">
         <button id="btn-mic" onclick="mulaiMendengar()">🎙️ BICARA</button>
-        <input type="text" id="input-teks" placeholder="Ketik tes di sini..." onkeypress="jikaTekanEnter(event)">
+        <input type="text" id="input-teks" placeholder="Ketik perintah..." onkeypress="jikaTekanEnter(event)">
         <button onclick="kirimPesan()">KIRIM</button>
     </div>
 
     <script>
         function bicara(teks) {
+            window.speechSynthesis.cancel();
             const suara = new SpeechSynthesisUtterance(teks);
             suara.lang = 'id-ID'; 
+            suara.rate = 1.3; 
             window.speechSynthesis.speak(suara);
         }
 
@@ -81,14 +83,14 @@
                 const data = await response.json();
                 
                 if (!data.choices || !data.choices[0]) {
-                    chatBox.innerHTML += `<div class="pesan error-log">SYSTEM ERROR DARI GROQ:<br>${JSON.stringify(data)}</div>`;
-                    chatBox.scrollTop = chatBox.scrollHeight;
+                    chatBox.innerHTML += `<div class="pesan error-log">SYSTEM ERROR:<br>${JSON.stringify(data)}</div>`;
                     return; 
                 }
 
                 const jawabanJarvis = data.choices[0].message.content;
                 chatBox.innerHTML += `<div class="pesan jarvis">Jarvis: ${jawabanJarvis}</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
+                
                 bicara(jawabanJarvis);
 
             } catch (error) {
@@ -101,4 +103,4 @@
         }
     </script>
 </body>
-</html> 
+</html>
