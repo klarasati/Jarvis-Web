@@ -11,7 +11,7 @@ export default async function handler(req, res) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                llama-3.1-8b-instan, // INI ADALAH OTAK VERSI TERBARU YANG AKTIF
+                llama-3.1-8b-instant, // INI ADALAH OTAK VERSI TERBARU YANG AKTIF
                 messages: req.body.messages,
                 temperature: 0.7
             })
